@@ -37,9 +37,9 @@ Released under the MIT License.
 ##Documentation
 The following is just a brief description of each method within the tournament.py  module:
 
-1. registerPlayer(name) : Adds a player to the tournament by putting an entry in the database.
-2. countPlayers() : Returns the number of currently registered players.
-3. deletePlayers() : Clear out all the player records from the database.
+1. application.py : Main Flask App that controls the flow of the requests. Please for detail see the application.py module.
+2. database_setup.py : set up DDBB.
+3. lotsofcategoryitems.py : Fillin DDBB with sample data.
 
 
 ##Previous Setup
