@@ -49,7 +49,7 @@ The following is just a brief description of each method within the tournament.p
 4. Go to the left hand Menu and clic API and auth, select credentials.
 5. In the OAuth Section clic create Client ID, make sure Web Application option is checked and then clic configure consent screen. The Consent Screen is the screen that will appeard when our app tries to connect to the google account.
 6. You must specify at least an email and the Product Name: catalog System App. Save the changes and then clic create client id.
-7. Now that we have a Client ID and client secret, let Edit the Configuration. In out authorized JavaScript origins (Orígenes de JavaScript autorizados) add the value "http://localhost:5000". this is needed for our local version of the code to work. Then click update
+7. Now that we have a Client ID and client secret, let Edit the Configuration. In out authorized JavaScript origins (Orígenes de JavaScript autorizados) add the value "http://localhost:8000". this is needed for our local version of the code to work. Then click update
 8. Download the client_secret as json file and sve it next to application.py with the name client_secret.json.
 9. Please update the login.html, where it says:data-clientid="CLIENT_ID" with your client_id.
 
