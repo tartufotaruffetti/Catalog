@@ -1,8 +1,8 @@
-'''
-Created on 09/09/2015
 
-@author: pc020
-'''
+
+
+
+
 from flask import Flask, render_template, request, redirect
 from flask import jsonify, url_for, flash
 from sqlalchemy import create_engine, asc
@@ -18,8 +18,13 @@ import json
 from flask import make_response
 import requests
 import bleach
+from flask.ext.seasurf import SeaSurf
 
 app = Flask(__name__)
+
+# SeaSurf is a Flask extention to prevent cross-site request forgeries (CSRF)
+csrf = SeaSurf(app)
+csrf.init_app(app)
 
 CLIENT_ID = json.loads(
     open('client_secret.json', 'r').read())['web']['client_id']
@@ -27,7 +32,7 @@ APPLICATION_NAME = "Catalog System App"
 
 
 # Connect to Database and create database session
-engine = create_engine('sqlite:///catalog.db')
+engine = create_engine('sqlite:///catalogitem1.db')
 Base.metadata.bind = engine
 
 DBSession = sessionmaker(bind=engine)
@@ -132,10 +137,13 @@ def gconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    output += ''' " style = "width: 300px;
+    height: 300px;border-radius: 150px;-webkit-border-radius:
+    150px;-moz-border-radius: 150px;"> '''
     output += '</center>'
     flash("you are now logged in as %s" % login_session['username'])
     return output
+
 
 # User Helper Functions
 def createUser(login_session):
@@ -143,7 +151,7 @@ def createUser(login_session):
         creates a user in the DDBB
         Args:
         login_session: from the session we get the username, email
-        and picture. 
+        and picture.
     '''
     newUser = User(name=login_session['username'], email=login_session[
                    'email'], picture=login_session['picture'])
@@ -151,6 +159,7 @@ def createUser(login_session):
     session.commit()
     user = session.query(User).filter_by(email=login_session['email']).one()
     return user.id
+
 
 # User Helper Functions
 def getUserInfo(user_id):
@@ -161,6 +170,7 @@ def getUserInfo(user_id):
     '''
     user = session.query(User).filter_by(id=user_id).one()
     return user
+
 
 # User Helper Functions
 def getUserID(email):
@@ -207,7 +217,9 @@ def catalogJSON():
     list = []
     categories = session.query(Category).all()
     for category in categories:
-        items = session.query(CategoryItem).filter_by(category_id=category.id).all()
+
+        items = session.query(CategoryItem).filter_by(
+            category_id=category.id).all()
         items_list = []
         for item in items:
             items_list.append(
@@ -218,7 +230,9 @@ def catalogJSON():
                     "created by": item.user.name
                 }
             )
-        list.append({"category": category.name, "category_id": category.id, "items": items_list})
+        list.append({"category": category.name,
+                     "category_id": category.id,
+                     "items": items_list})
     return jsonify({"catalog": list})
 
 
@@ -254,12 +268,20 @@ def catalogXML():
 
     list.append('<catalog>')
     for category in categories:
-        list.append('<category name ="' + category.name + '" category_id = "' + str(category.id) + '" >')
-        items = session.query(CategoryItem).filter_by(category_id=category.id).all()
+        list.append
+        (
+            '<category name = "' + category.name +
+            '" category_id = "' + str(category.id) + '" >'
+
+        )
+        items = session.query(CategoryItem).filter_by(
+            category_id=category.id).all()
         for item in items:
             list.append(
-                '<item ><title>' + item.title + '</title><id>' + str(item.id) + '</id><description>' +
-                item.description + '</description><created_by>' + item.user.name + '</created_by></item>'
+                '<item ><title>' + item.title +
+                '</title><id>' + str(item.id) + '</id><description>' +
+                item.description + '</description><created_by>' +
+                item.user.name + '</created_by></item>'
             )
         list.append('</category>')
     list.append('</catalog>')
@@ -297,16 +319,22 @@ def newCategory():
         # cleaning the variables to avoid sql injection attack
         name = bleach.clean(request.form['name'])
         name = bleach.linkify(request.form['name'])
-        
+
+
         # validating the request form
         if not name:
             flash("Please enter a Category name.")
             return render_template('newcategory.html')
-        
+
+
         # check if exist another category with the same name
         existingCategory = session.query(Category).filter_by(name=name).first()
         if existingCategory:
-            flash("A Category with the same name already exists. Please choose a different name")
+            flash
+            (
+                "A Category with the same name already exists. " +
+                "Please choose a different name"
+            )
             return render_template('newcategory.html')
         # if the name is unique then we can create
         newCategory = Category(name=name, user_id=login_session['user_id'])
@@ -330,14 +358,19 @@ def editCategory(category_id):
             category_id: the id of the category edit
             name: it comes in the post form. A string for cat name
     '''
-    # identify the category to edit
-    editedCategory = session.query(Category).filter_by(id=category_id).one()
+
+
     # check if user is login
     if 'username' not in login_session:
         return redirect('/login')
+    # identify the category to edit
+    editedCategory = session.query(
+        Category).filter_by(id=category_id).one()
     # checking user it is the owner of the category
     if editedCategory.user_id != login_session['user_id']:
-        return "<script>function myFunction() {alert('You are not authorized to edit this category. Please create your own category in order to edit.');}</script><body onload='myFunction()''>"
+
+        flash("You are not authorized to execute this action")
+        return redirect(url_for('showCategories'))
     # if post then we are editing
     if request.method == 'POST':
         # cleaning the variables to avoid sql injection attack
@@ -346,12 +379,25 @@ def editCategory(category_id):
         # validating the request form
         if not name:
             flash("Please enter a Category name.")
-            return render_template('editcategory.html', category=editedCategory)
+
+            # rendering the category form to edit
+            return render_template(
+                'editcategory.html',
+                category=editedCategory
+            )
         # checking there is no other category with the same name
         existingCategory = session.query(Category).filter_by(name=name).first()
         if existingCategory:
-            flash("A Category with the same name already exists. Please choose a different name")
-            return render_template('editcategory.html', category=editedCategory)
+            flash
+            (
+                "A Category with the same name already exists. " +
+
+                "Please choose a different name"
+            )
+            return render_template(
+                'editcategory.html',
+                category=editedCategory
+            )
         # if ok we can edit
         if name:
             editedCategory.name = name
@@ -374,14 +420,18 @@ def deleteCategory(category_id):
         Args:
             category_id: the id of the category to delete
     '''
-    # identifying the record to delete
-    categoryToDelete = session.query(Category).filter_by(id=category_id).one()
+
+
     # check if user is login
     if 'username' not in login_session:
         return redirect('/login')
+    # identifying the record to delete
+    categoryToDelete = session.query(Category).filter_by(id=category_id).one()
     # checking user it is the owner of the category
     if categoryToDelete.user_id != login_session['user_id']:
-        return "<script>function myFunction() {alert('You are not authorized to delete this category. Please create your own category in order to delete.');}</script><body onload='myFunction()''>"
+
+        flash("You are not authorized to execute this action")
+        return redirect(url_for('showCategories'))
     # if post then we are deleting
     if request.method == 'POST':
         session.delete(categoryToDelete)
@@ -391,7 +441,11 @@ def deleteCategory(category_id):
         return redirect(url_for('showCategories', category_id=category_id))
     else:
         # rendering the confirmatin page to delete
-        return render_template('deletecategory.html', category=categoryToDelete)
+
+        return render_template(
+            'deletecategory.html',
+            category=categoryToDelete
+        )
 
 
 # show all the items of a category
@@ -413,12 +467,25 @@ def showItem(category_id):
     items = session.query(CategoryItem).filter_by(
         category_id=category_id).all()
     # if user is not login
-    if 'username' not in login_session or creator.id != login_session['user_id']:
-        # we render just the list of items with out edit delete links
-        return render_template('publicitem.html', items=items, category=category, creator=creator)
+    if 'username' not in login_session \
+            or creator.id != login_session['user_id']:
+
+
+        # we render just the list of items with
+        # out edit delete links
+        return render_template(
+            'publicitem.html',
+            items=items,
+            category=category,
+            creator=creator
+        )
     else:
         # we render the list of items with edit delete links
-        return render_template('item.html', items=items, category=category, creator=creator)
+        return render_template(
+            'item.html', items=items,
+            category=category, creator=creator
+        )
+
 
 # render the image of an item
 @app.route('/item/<int:item_id>/image')
@@ -429,7 +496,10 @@ def item_image(item_id):
             item_id: int the id of the item we wanna see the image
     '''
     item = session.query(CategoryItem).filter_by(id=item_id).one()
-    return app.response_class(item.image_data, mimetype='application/octet-stream')
+    return app.response_class(
+        item.image_data,
+        mimetype='application/octet-stream'
+    )
 
 
 # create a new item in a category
@@ -438,19 +508,23 @@ def newCategoryItem(category_id):
     '''
         function to create a new item category
         Args:
-            category_id: int the id of the category where we want to create 
+            category_id: int the id of the category where we want to create
             a new item.
             We pick from the form POST the title and the description
             as well as the picture
     '''
-    # we get the category
-    category = session.query(Category).filter_by(id=category_id).one()
+
+
     # make sure the user is login
     if 'username' not in login_session:
         return redirect('/login')
+    # we get the category
+    category = session.query(Category).filter_by(id=category_id).one()
     # make sure the user is the creator of the category
     if login_session['user_id'] != category.user_id:
-        return "<script>function myFunction() {alert('You are not authorized to add menu items to this category. Please create your own category in order to add items.');}</script><body onload='myFunction()''>"
+
+        flash("You are not authorized to execute this action")
+        return redirect(url_for('showCategories'))
     # if it is POST we will create
     if request.method == 'POST':
         # get the title and clean it a bit
@@ -461,43 +535,72 @@ def newCategoryItem(category_id):
         description = request.form['description']
         description = bleach.clean(description)
         description = bleach.linkify(description)
-        
+
+
         # validating the request form
         if not title:
             flash("Please enter a Item title.")
             return render_template('newitem.html', category_id=category_id)
 
-        newItem = CategoryItem(title=title, description=description, category_id=category_id,
-                               user_id=category.user_id)
-        
+
+        newItem = CategoryItem(
+            title=title,
+            description=description,
+            category_id=category_id,
+            user_id=category.user_id
+
+        )
+
         # first we are gonna declare the picture(file name)
         # and the picture data binary as none
         # validate the data and load them if necesary
         picture_data = None
         picture = None
-        # verify that we are getting an image file and that it is not too big>5Mb
+
+        # verify that we are getting an image file
+        # and that it is not too big>5Mb
         picture = request.files['image']
         if picture:
             # only these options are allowed as a image
             extensions = {".jpg", ".png", ".jpeg"}
             # if not we let the client know
-            if not any(str(picture.filename).endswith(ext) for ext in extensions):
-                flash("Please load a Item image; only jpg, jpeg or png are allowed.")
+            if not any(
+                str(picture.filename).endswith(ext)
+
+                for ext in extensions
+            ):
+                flash
+                (
+                    "Please load a Item image; " +
+                    "only jpg, jpeg or png are allowed."
+                )
                 return render_template('newitem.html', category_id=category_id)
             else:
                 # verify the size of the image
                 picture_data = request.files['image'].read()
                 if len(picture_data) > 5242880:
                     flash("Please load a Item image with size less than 5Mb.")
-                    return render_template('newitem.html', category_id=category_id)
+
+                    return render_template(
+                        'newitem.html',
+                        category_id=category_id
+                    )
                 else:
                     newItem.image = picture.filename
                     newItem.image_data = picture_data
 
-        # verify that within the category there isn't another item with the same title
-        existingItem = session.query(CategoryItem).filter_by(title=request.form['title'], category_id=category_id).first()
+
+        # verify that within the category there isn't another
+        # item with the same title
+        existingItem = session.query(CategoryItem).filter_by(
+                    title=request.form['title'],
+                    category_id=category_id).first()
         if existingItem:
-            flash("A Item with the same name already exists in this Category. Please choose a different name")
+            flash
+            (
+                "A Item with the same name already exists in this Category. " +
+                "Please choose a different name"
+            )
             return render_template('newitem.html', category_id=category_id)
         else:
             # create item
@@ -512,37 +615,47 @@ def newCategoryItem(category_id):
 
 
 # edit a new item category
-@app.route('/category/<int:category_id>/item/<int:item_id>/edit/', methods=['GET', 'POST'])
+@app.route(
+    '/category/<int:category_id>/item/<int:item_id>/edit/',
+    methods=['GET', 'POST']
+    )
 def editCategoryItem(category_id, item_id):
     '''
         function to edit an item category
         Args:
-            category_id: int category`id that item id belongs 
+            category_id: int category`id that item id belongs
             item_id: int the item id
             We pick from the form POST the title and the description
             as well as the picture
     '''
-    # instanciate category and item objs.
-    editedItem = session.query(CategoryItem).filter_by(id=item_id).one()
-    category = session.query(Category).filter_by(id=category_id).one()
+
+
+
     # check user is login
     if 'username' not in login_session:
         return redirect('/login')
+    # instanciate category and item objs.
+    editedItem = session.query(CategoryItem).filter_by(id=item_id).one()
+    category = session.query(Category).filter_by(id=category_id).one()
     # check user is creator of the category
     if login_session['user_id'] != category.user_id:
-        return "<script>function myFunction() {alert('You are not authorized to edit menu items to this category. Please create your own category in order to edit items.');}</script><body onload='myFunction()''>"
+
+        flash("You are not authorized to execute this action")
+        return redirect(url_for('showCategories'))
     # if it is a post we are editing
     if request.method == 'POST':
         # get the title and clean it a bit
         title = request.form['title']
         title = bleach.clean(title)
         title = bleach.linkify(title)
-        
+
+
         # get the description and clean it a bit
         description = request.form['description']
         description = bleach.clean(description)
         description = bleach.linkify(description)
-        
+
+
         # validating the title field
         if not title:
             flash("Please enter a Item title.")
@@ -552,38 +665,71 @@ def editCategoryItem(category_id, item_id):
         # validating the description field
         if description:
             editedItem.description = description
-        
+
+
         # first we are gonna declare the picture(file name)
         # and the picture data (binary) as none
         # validate the data and load them if necesary
         picture_data = None
         picture = request.files['image']
-        
-        # verify that we are getting an image file and that it is not too big>5Mb
+
+
+        # verify that we are getting an image
+        # file and that it is not too big>5Mb
         if picture:
             # only these options are allowed as a image
             extensions = {".jpg", ".png", ".jpeg"}
             # if not we let the client know
-            if not any(str(picture.filename).endswith(ext) for ext in extensions):
-                flash("Please load a Item image; only jpg, jpeg or png are allowed.")
-                return render_template('edititem.html', category_id=category_id, item_id=item_id, item=editedItem)
+            if not any(
+                str(picture.filename).endswith(ext)
+
+
+                for ext in extensions
+            ):
+                flash
+                (
+                    "Please load a Item image; " +
+                    "only jpg, jpeg or png are allowed."
+                )
+                return render_template(
+                    'edititem.html',
+                    category_id=category_id,
+                    item_id=item_id,
+                    item=editedItem
+                )
             else:
                 # verify the size of the image
                 picture_data = request.files['image'].read()
                 if len(picture_data) > 5242880:
                     flash("Please load a Item image with size less than 5Mb.")
-                    return render_template('newitem.html', category_id=category_id)
+                    return render_template(
+                            'newitem.html', category_id=category_id)
                 else:
                     editedItem.image = picture.filename
                     editedItem.image_data = picture_data
-                    
-        # verify that within the category there isn't another item with the same title
-        existingItem = session.query(CategoryItem).filter_by(title=title, category_id=category_id).all()
+
+
+
+
+        # verify that within the category there isn't another
+        # item with the same title
+        existingItem = session.query(CategoryItem).filter_by(
+                title=title, category_id=category_id).all()
         for i in existingItem:
             print("Item con ID %s", i.id)
             if i.id != editedItem.id:
-                flash("A Item with the same name already exists in this Category. Please choose a different name")
-                return render_template('edititem.html', category_id=category_id, item_id=item_id, item=editedItem)
+
+
+                flash
+                (
+                    "A Item with the same name already exists in " +
+                    "this Category. " +
+                    "Please choose a different name"
+                )
+                return render_template('edititem.html',
+                                       category_id=category_id,
+                                       item_id=item_id,
+                                       item=editedItem)
         else:
             # edit item
             session.add(editedItem)
@@ -592,26 +738,38 @@ def editCategoryItem(category_id, item_id):
             return redirect(url_for('showItem', category_id=category_id))
     else:
         # if not login render the public page
-        return render_template('edititem.html', category_id=category_id, item_id=item_id, item=editedItem)
+
+        return render_template(
+            'edititem.html',
+            category_id=category_id,
+            item_id=item_id, item=editedItem
+        )
 
 
-@app.route('/category/<int:category_id>/item/<int:item_id>/delete/', methods=['GET', 'POST'])
+@app.route('/category/<int:category_id>/item/<int:item_id>/delete/',
+           methods=['GET', 'POST'])
 def deleteCategoryItem(category_id, item_id):
     '''
         function to delete an item
-        Args: 
+        Args:
             category_id: int the category`id the item belogs to.
             item_id: int the item id to delete
     '''
-    # instanciate category and items objects
-    category = session.query(Category).filter_by(id=category_id).one()
-    itemToDelete = session.query(CategoryItem).filter_by(id=item_id).one()
+
+
+
     # check if user is login
     if 'username' not in login_session:
         return redirect('/login')
+    # instanciate category object
+    category = session.query(Category).filter_by(id=category_id).one()
     # check if user is the creator of the category
     if login_session['user_id'] != category.user_id:
-        return "<script>function myFunction() {alert('You are not authorized to delete menu items to this category. Please create your own category in order to delete items.');}</script><body onload='myFunction()''>"
+
+        flash("You are not authorized to execute this action")
+        return redirect(url_for('showCategories'))
+    # instanciate items object
+    itemToDelete = session.query(CategoryItem).filter_by(id=item_id).one()
     # if it is a post we are deleting
     if request.method == 'POST':
         # delete the object
@@ -621,7 +779,8 @@ def deleteCategoryItem(category_id, item_id):
         return redirect(url_for('showItem', category_id=category_id))
     else:
         # render public page
-        return render_template('deleteitem.html', item=itemToDelete, category_id=category_id)
+        return render_template('deleteitem.html',
+                               item=itemToDelete, category_id=category_id)
 
 
 # Disconnect based on provider
@@ -655,4 +814,4 @@ def disconnect():
 if __name__ == '__main__':
     app.secret_key = 'super_secret_key'
     app.debug = True
-    app.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', port=5000)
