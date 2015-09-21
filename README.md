@@ -64,10 +64,13 @@ If you would like to run this project using the Udacity VM you will need to do t
 5. Using the terminal, change directory to fullstack/vagrant (cd fullstack/vagrant), then type vagrant up to launch your virtual machine. 
 6. type vagrant ssh to log into it. 
 7. type ```cd /vagrant/catalog``` . Make sure all files from this repo are in the directory tournament , you can either copy directly or clone them from github. Check everything is in place by typing ``` ls ``` and you should see the three main files; application.py, database_setup.py and lotsofcategoryitems.py
-8. run ``` python database_setup.py ``` to config the database.
-9. run ``` python lotsofcategoryitems.py ```. This should populate the database.
-10. run ``` python application.py ```.
-11. if everything went ok, then you should see the webpage at http://localhost:8000!
+8. Before running make sure you have install Flask-SeaSurf. You can installed by typing 
+  ``` sudo pip install flask-seasurf ```
+  Please check this web page for help : https://flask-seasurf.readthedocs.org/en/latest/
+9. run ``` python database_setup.py ``` to config the database.
+10. run ``` python lotsofcategoryitems.py ```. This should populate the database.
+11. run ``` python application.py ```.
+12. if everything went ok, then you should see the webpage at http://localhost:8000!
 
 ##Authors
 Tartufo Taruffetti
